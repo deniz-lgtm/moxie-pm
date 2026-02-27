@@ -12,67 +12,75 @@ export async function GET() {
 
   const results: Record<string, unknown> = {};
 
-  // Fetch ALL rent_roll entries and group by Status
+  // Fetch first 50 rent_roll entries to see status values
   try {
-    const allUnits: Record<string, any>[] = [];
-    let page = 1;
-    while (true) {
-      const url = `https://${database}/api/v1/reports/rent_roll.json?paginate_results=true&per_page=200&page=${page}`;
-      const res = await fetch(url, { headers, cache: "no-store" });
-      if (!res.ok) break;
+    const url = `https://${database}/api/v1/reports/rent_roll.json?paginate_results=true&per_page=50&page=1`;
+    const res = await fetch(url, { headers, cache: "no-store" });
+    if (res.ok) {
       const data = await res.json();
-      const batch = data.results || [];
-      allUnits.push(...batch);
-      if (batch.length < 200) break;
-      page++;
+      const units = data.results || [];
+      const statusCounts: Record<string, number> = {};
+      for (const u of units) {
+        const s = u.Status || "unknown";
+        statusCounts[s] = (statusCounts[s] || 0) + 1;
+      }
+      const nonCurrent = units.filter((u: Record<string, any>) => u.Status !== "Current");
+      results["rent_roll"] = {
+        total: units.length,
+        statusCounts,
+        nonCurrentCount: nonCurrent.length,
+        nonCurrentSample: nonCurrent.slice(0, 3),
+      };
+    } else {
+      results["rent_roll"] = { status: res.status, body: await res.text().then(t => t.slice(0, 300)) };
     }
-
-    // Group by status
-    const statusCounts: Record<string, number> = {};
-    for (const u of allUnits) {
-      const s = u.Status || "unknown";
-      statusCounts[s] = (statusCounts[s] || 0) + 1;
-    }
-
-    // Find vacant/notice units
-    const vacantUnits = allUnits.filter(
-      (u) => u.Status === "Vacant" || u.Status === "Notice" || u.Status === "Past"
-    );
-
-    results["rent_roll_summary"] = {
-      total: allUnits.length,
-      statusCounts,
-      vacantCount: vacantUnits.length,
-      vacantSample: vacantUnits.slice(0, 3),
-    };
   } catch (e) {
-    results["rent_roll_summary"] = { error: String(e) };
+    results["rent_roll"] = { error: String(e) };
   }
 
-  // Find units posted to website from unit_directory
+  // Fetch first 50 unit_directory entries to check PostedToWebsite
   try {
-    const allUnits: Record<string, any>[] = [];
-    let page = 1;
-    while (true) {
-      const url = `https://${database}/api/v1/reports/unit_directory.json?paginate_results=true&per_page=200&page=${page}`;
-      const res = await fetch(url, { headers, cache: "no-store" });
-      if (!res.ok) break;
+    const url = `https://${database}/api/v1/reports/unit_directory.json?paginate_results=true&per_page=50&page=1`;
+    const res = await fetch(url, { headers, cache: "no-store" });
+    if (res.ok) {
       const data = await res.json();
-      const batch = data.results || [];
-      allUnits.push(...batch);
-      if (batch.length < 200) break;
-      page++;
+      const units = data.results || [];
+      const posted = units.filter((u: Record<string, any>) => u.PostedToWebsite === "Yes");
+      results["unit_directory"] = {
+        total: units.length,
+        postedCount: posted.length,
+        postedSample: posted.slice(0, 3),
+      };
+    } else {
+      results["unit_directory"] = { status: res.status };
     }
-
-    const postedUnits = allUnits.filter((u) => u.PostedToWebsite === "Yes");
-
-    results["unit_directory_summary"] = {
-      total: allUnits.length,
-      postedToWebsite: postedUnits.length,
-      postedSample: postedUnits.slice(0, 5),
-    };
   } catch (e) {
-    results["unit_directory_summary"] = { error: String(e) };
+    results["unit_directory"] = { error: String(e) };
+  }
+
+  // Try fetching pages 3-5 of rent_roll (later pages more likely to have vacant residential units)
+  try {
+    const url = `https://${database}/api/v1/reports/rent_roll.json?paginate_results=true&per_page=50&page=5`;
+    const res = await fetch(url, { headers, cache: "no-store" });
+    if (res.ok) {
+      const data = await res.json();
+      const units = data.results || [];
+      const statusCounts: Record<string, number> = {};
+      for (const u of units) {
+        const s = u.Status || "unknown";
+        statusCounts[s] = (statusCounts[s] || 0) + 1;
+      }
+      const nonCurrent = units.filter((u: Record<string, any>) => u.Status !== "Current");
+      results["rent_roll_page5"] = {
+        total: units.length,
+        statusCounts,
+        nonCurrentSample: nonCurrent.slice(0, 3),
+      };
+    } else {
+      results["rent_roll_page5"] = { status: res.status };
+    }
+  } catch (e) {
+    results["rent_roll_page5"] = { error: String(e) };
   }
 
   return NextResponse.json({ results }, { status: 200 });
