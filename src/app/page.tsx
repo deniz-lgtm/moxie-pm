@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { fetchProperties, fetchAvailableUnits } from "@/lib/appfolio";
+import { Property, Unit } from "@/types";
 import {
   ArrowRight,
   Shield,
@@ -11,16 +13,19 @@ import {
   Phone,
 } from "lucide-react";
 
-const featuredProperties = [
+// Revalidate every hour so listings stay fresh
+export const revalidate = 3600;
+
+// Fallback data when API is not configured
+const fallbackProperties = [
   {
     id: "9be44f86-b345-4126-aa5f-e3bf34813968",
-    name: "Portland Street",
-    neighborhood: "University Park",
     address: "2714 Portland St",
-    price: "$5,595",
+    city: "Los Angeles",
     beds: "3",
     baths: "3",
-    sqft: "955",
+    sqft: 955,
+    price: "$5,595",
     image:
       "https://images.cdn.appfolio.com/mbtenants/images/3920c0d6-4837-43f0-bb16-796e73aca7c6/large.jpg",
     tag: "Furnished",
@@ -29,12 +34,12 @@ const featuredProperties = [
   },
   {
     id: "c1f56d1f-e834-44f6-917d-bd146e3242a3",
-    name: "Ellendale Place",
-    neighborhood: "University Park",
     address: "2728 Ellendale Pl",
-    price: "$4,150",
+    city: "Los Angeles",
     beds: "3",
     baths: "2",
+    sqft: 0,
+    price: "$4,150",
     image:
       "https://images.cdn.appfolio.com/mbtenants/images/b3a002b5-8fb0-461f-baaf-368818b08360/large.jpg",
     tag: "Tree-Lined Street",
@@ -43,13 +48,12 @@ const featuredProperties = [
   },
   {
     id: "ec5d5e7e-c6f1-4c71-80ff-e4d1befdfa52",
-    name: "W 23rd Street",
-    neighborhood: "University Park",
     address: "707 W 23rd St",
-    price: "$3,999",
+    city: "Los Angeles",
     beds: "4",
     baths: "3.5",
-    sqft: "2,039",
+    sqft: 2039,
+    price: "$3,999",
     image:
       "https://images.cdn.appfolio.com/mbtenants/images/c3685716-2b78-4347-88e4-dad7ee8d60ff/large.jpg",
     tag: "Spacious",
@@ -58,7 +62,7 @@ const featuredProperties = [
   },
 ];
 
-const allListings = [
+const fallbackUnits = [
   {
     address: "909 W 30th St",
     unit: "Unit 2",
@@ -121,7 +125,58 @@ const allListings = [
   },
 ];
 
-export default function HomePage() {
+function formatDate(dateStr: string | null): string {
+  if (!dateStr) return "Now";
+  const d = new Date(dateStr);
+  if (d <= new Date()) return "Now";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function mapPropertiesToCards(properties: Property[]) {
+  return properties.slice(0, 3).map((p) => ({
+    id: p.id,
+    address: p.address,
+    city: p.city || "Los Angeles",
+    beds: String(p.totalUnits > 0 ? `1-${Math.min(p.totalUnits, 4)}` : "1+"),
+    baths: "1+",
+    sqft: 0,
+    price: p.minRent > 0 ? `$${p.minRent.toLocaleString()}` : "Call",
+    image: p.photos?.[0] || fallbackProperties[0].image,
+    tag: p.availableUnits > 0 ? `${p.availableUnits} Available` : "Leasing",
+    description: p.description || p.name,
+  }));
+}
+
+function mapUnitsToCards(units: Unit[]) {
+  return units.slice(0, 6).map((u) => ({
+    address: u.address || u.propertyName,
+    unit: u.unitNumber ? `Unit ${u.unitNumber}` : "",
+    beds: u.beds === 0 ? "Studio" : String(u.beds),
+    baths: String(u.baths),
+    rent: u.rent > 0 ? `$${u.rent.toLocaleString()}` : "Call",
+    available: formatDate(u.availableDate),
+    image: u.photos?.[0] || fallbackUnits[0].image,
+  }));
+}
+
+export default async function HomePage() {
+  // Fetch live data from Appfolio API (filtered by "Moxie PM" portfolio tag)
+  const [apiProperties, apiUnits] = await Promise.all([
+    fetchProperties(),
+    fetchAvailableUnits(),
+  ]);
+
+  // Use API data if available, otherwise fall back to hardcoded listings
+  const properties =
+    apiProperties.length > 0
+      ? mapPropertiesToCards(apiProperties)
+      : fallbackProperties;
+  const units =
+    apiUnits.length > 0 ? mapUnitsToCards(apiUnits) : fallbackUnits;
+  const totalUnits =
+    apiUnits.length > 0 ? apiUnits.length : fallbackUnits.length;
+  const isLive = apiProperties.length > 0 || apiUnits.length > 0;
+
   return (
     <div className="flex flex-col">
       {/* Hero Section - Full Viewport */}
@@ -199,7 +254,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Featured Properties - Real Appfolio Data */}
+      {/* Featured Properties */}
       <section className="py-20 md:py-28 bg-white">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between mb-12">
@@ -221,18 +276,22 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {featuredProperties.map((property) => (
+            {properties.map((property) => (
               <Link
                 key={property.id}
-                href={`https://mbtenants.appfolio.com/listings/detail/${property.id}`}
-                target="_blank"
+                href={
+                  isLive
+                    ? `/properties/${property.id}`
+                    : `https://mbtenants.appfolio.com/listings/detail/${property.id}`
+                }
+                target={isLive ? undefined : "_blank"}
                 className="group cursor-pointer"
               >
                 <div className="rounded-2xl overflow-hidden bg-white border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300">
                   <div className="aspect-[4/3] relative overflow-hidden">
                     <img
                       src={property.image}
-                      alt={property.name}
+                      alt={property.address}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute top-4 left-4">
@@ -248,7 +307,7 @@ export default function HomePage() {
                       </h3>
                       <div className="flex items-center text-sm text-slate-500 mt-1">
                         <MapPin className="h-3.5 w-3.5 mr-1" />
-                        {property.neighborhood} &middot; Los Angeles, CA
+                        {property.city}, CA
                       </div>
                     </div>
                     <p className="text-slate-600 text-sm mt-3 line-clamp-2">
@@ -263,9 +322,9 @@ export default function HomePage() {
                         <Bath className="h-4 w-4" />
                         {property.baths} Bath
                       </span>
-                      {property.sqft && (
+                      {property.sqft > 0 && (
                         <span className="text-xs text-slate-400">
-                          {property.sqft} sqft
+                          {property.sqft.toLocaleString()} sqft
                         </span>
                       )}
                       <span className="ml-auto font-bold text-lg text-slate-900">
@@ -283,7 +342,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Available Now - Real Listings */}
+      {/* Available Now */}
       <section className="py-20 md:py-28 bg-slate-50">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between mb-12">
@@ -295,12 +354,16 @@ export default function HomePage() {
                 Current Listings
               </h2>
               <p className="text-slate-600">
-                15+ units available across Los Angeles
+                {totalUnits}+ units available across Los Angeles
               </p>
             </div>
             <Link
-              href="https://mbtenants.appfolio.com/listings"
-              target="_blank"
+              href={
+                isLive
+                  ? "/availability"
+                  : "https://mbtenants.appfolio.com/listings"
+              }
+              target={isLive ? undefined : "_blank"}
               className="text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1 mt-4 md:mt-0"
             >
               See all availability
@@ -309,11 +372,15 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {allListings.map((listing, i) => (
+            {units.map((listing, i) => (
               <Link
                 key={i}
-                href="https://mbtenants.appfolio.com/listings"
-                target="_blank"
+                href={
+                  isLive
+                    ? "/availability"
+                    : "https://mbtenants.appfolio.com/listings"
+                }
+                target={isLive ? undefined : "_blank"}
                 className="group"
               >
                 <div className="bg-white rounded-xl overflow-hidden border border-slate-100 hover:shadow-lg transition-all duration-300">
@@ -368,8 +435,15 @@ export default function HomePage() {
               asChild
               className="bg-amber-500 hover:bg-amber-600 text-black font-semibold px-8"
             >
-              <Link href="https://mbtenants.appfolio.com/listings" target="_blank">
-                View All 15+ Listings
+              <Link
+                href={
+                  isLive
+                    ? "/availability"
+                    : "https://mbtenants.appfolio.com/listings"
+                }
+                target={isLive ? undefined : "_blank"}
+              >
+                View All {totalUnits}+ Listings
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
@@ -377,7 +451,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Why Moxie Section - with real property photos */}
+      {/* Why Moxie Section */}
       <section className="py-20 md:py-28 bg-white">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
@@ -548,7 +622,7 @@ export default function HomePage() {
               asChild
               className="bg-amber-500 hover:bg-amber-600 text-black font-semibold px-8 h-12"
             >
-              <Link href="https://mbtenants.appfolio.com/listings" target="_blank">
+              <Link href="/availability">
                 View Available Units
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
