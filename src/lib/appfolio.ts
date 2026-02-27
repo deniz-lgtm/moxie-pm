@@ -37,45 +37,30 @@ function getAuthHeaders() {
   };
 }
 
-async function fetchAllPages(baseUrl: string): Promise<Record<string, any>[]> {
-  const headers = getAuthHeaders();
-  const allResults: Record<string, any>[] = [];
-  let page = 1;
+async function fetchReport(reportName: string): Promise<Record<string, any>[]> {
+  const url = `${getBaseUrl()}/${reportName}.json?paginate_results=true&per_page=500`;
+  const response = await fetch(url, {
+    headers: getAuthHeaders(),
+    next: { revalidate: 3600 },
+  });
 
-  while (true) {
-    const url = `${baseUrl}${baseUrl.includes("?") ? "&" : "?"}paginate_results=true&per_page=200&page=${page}`;
-    const response = await fetch(url, {
-      headers,
-      next: { revalidate: 3600 },
-    });
-
-    if (!response.ok) {
-      if (allResults.length > 0) break;
-      throw new Error(`Appfolio API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const results = data.results || [];
-    allResults.push(...results);
-
-    if (results.length < 200) break;
-    page++;
+  if (!response.ok) {
+    throw new Error(`Appfolio API error: ${response.status}`);
   }
 
-  return allResults;
+  const data = await response.json();
+  return data.results || [];
 }
 
 export async function fetchProperties(): Promise<Property[]> {
   if (!isConfigured()) return [];
 
   try {
-    const results = await fetchAllPages(
-      `${getBaseUrl()}/property_directory.json`
-    );
+    const results = await fetchReport("property_directory");
 
     return results.map((p: Record<string, any>) => ({
-      id: String(p.PropertyId || p.Property_id || Math.random()),
-      name: p.PropertyName || p.Property || "Unnamed Property",
+      id: String(p.PropertyId || Math.random()),
+      name: p.PropertyName || "Unnamed Property",
       address: p.PropertyAddress || [p.PropertyStreet1, p.PropertyStreet2].filter(Boolean).join(" ") || "",
       city: p.PropertyCity || "Los Angeles",
       state: p.PropertyState || "CA",
@@ -109,41 +94,51 @@ export async function fetchProperty(id: string): Promise<Property | null> {
   }
 }
 
+function parseBdBa(bdba: string): { beds: number; baths: number } {
+  if (!bdba) return { beds: 0, baths: 0 };
+  const parts = bdba.split("/");
+  return {
+    beds: parseInt(parts[0], 10) || 0,
+    baths: parseFloat(parts[1]) || 0,
+  };
+}
+
 export async function fetchAvailableUnits(): Promise<Unit[]> {
   if (!isConfigured()) return [];
 
   try {
-    // Use rent_roll report and filter for vacant units
-    const results = await fetchAllPages(
-      `${getBaseUrl()}/rent_roll.json`
+    // Use unit_directory and filter for units posted to website (active listings)
+    const units = await fetchReport("unit_directory");
+    const postedUnits = units.filter(
+      (u: Record<string, any>) => u.PostedToWebsite === "Yes"
     );
 
-    // Filter for vacant units (where tenant is empty or status indicates vacancy)
-    const vacantUnits = results.filter((u: Record<string, any>) => {
-      const status = String(u.Status || u.OccupancyStatus || "").toLowerCase();
-      const tenant = String(u.Tenant || u.TenantName || "").trim();
-      return (
-        status.includes("vacant") ||
-        status.includes("available") ||
-        tenant === "" ||
-        tenant === "Vacant"
-      );
-    });
+    // Also get rent_roll for vacancy status and BdBa info
+    const rentRoll = await fetchReport("rent_roll");
+    const rentRollByUnitId = new Map<number, Record<string, any>>();
+    for (const r of rentRoll) {
+      if (r.UnitId) rentRollByUnitId.set(r.UnitId, r);
+    }
 
-    return vacantUnits.map((u: Record<string, any>) => ({
-      id: String(u.UnitId || u.Unit_id || Math.random()),
-      propertyId: String(u.PropertyId || u.Property_id || ""),
-      propertyName: u.PropertyName || u.Property || "",
-      unitNumber: u.UnitName || u.Unit || u.UnitNumber || "",
-      beds: parseInt(String(u.Bedrooms || u.Beds || "0"), 10) || 0,
-      baths: parseFloat(String(u.Bathrooms || u.Baths || "0")) || 0,
-      sqft: parseInt(String(u.SqFt || u.SquareFeet || "0").replace(/,/g, ""), 10) || 0,
-      rent: parseFloat(String(u.MarketRent || u.Rent || u.ActualRent || "0").replace(/[,$]/g, "")) || 0,
-      availableDate: u.AvailableDate || u.MoveOutDate || null,
-      availableNow: true,
-      photos: [],
-      address: u.PropertyAddress || [u.PropertyStreet1, u.PropertyStreet2].filter(Boolean).join(" ") || "",
-    }));
+    return postedUnits.map((u: Record<string, any>) => {
+      const rr = rentRollByUnitId.get(u.UnitId) || {};
+      const { beds, baths } = parseBdBa(rr.BdBa || "");
+
+      return {
+        id: String(u.UnitId || Math.random()),
+        propertyId: String(u.PropertyId || ""),
+        propertyName: u.PropertyName || "",
+        unitNumber: u.UnitName || "",
+        beds: parseInt(String(u.Bedrooms || "0"), 10) || beds,
+        baths: parseFloat(String(u.Bathrooms || "0")) || baths,
+        sqft: parseInt(String(u.SquareFt || "0").replace(/,/g, ""), 10) || 0,
+        rent: parseFloat(String(u.MarketRent || u.AdvertisedRent || "0").replace(/[,$]/g, "")) || 0,
+        availableDate: rr.MoveOut || null,
+        availableNow: !rr.MoveOut || new Date(rr.MoveOut) <= new Date(),
+        photos: [],
+        address: u.UnitAddress || [u.UnitStreet1, u.UnitStreet2].filter(Boolean).join(" ") || "",
+      };
+    });
   } catch (error) {
     console.error("Error fetching units:", error);
     return [];
