@@ -23,7 +23,7 @@ function isConfigured(): boolean {
 
 function getBaseUrl(): string {
   const config = getConfig();
-  return `https://${config.database}/api/v2/reports`;
+  return `https://${config.database}/api/v1/reports`;
 }
 
 function getAuthHeaders() {
@@ -37,52 +37,61 @@ function getAuthHeaders() {
   };
 }
 
-export async function fetchProperties(): Promise<Property[]> {
-  if (!isConfigured()) return [];
+async function fetchAllPages(baseUrl: string): Promise<Record<string, any>[]> {
+  const headers = getAuthHeaders();
+  const allResults: Record<string, any>[] = [];
+  let page = 1;
 
-  const config = getConfig();
-
-  try {
-    const url = new URL(`${getBaseUrl()}/property_directory.json`);
-    url.searchParams.append("per_page", "100");
-
-    if (config.portfolioTag) {
-      url.searchParams.append("tags", config.portfolioTag);
-    }
-
-    const response = await fetch(url.toString(), {
-      headers: getAuthHeaders(),
-      next: { revalidate: 3600 }, // Cache for 1 hour
+  while (true) {
+    const url = `${baseUrl}${baseUrl.includes("?") ? "&" : "?"}paginate_results=true&per_page=200&page=${page}`;
+    const response = await fetch(url, {
+      headers,
+      next: { revalidate: 3600 },
     });
 
     if (!response.ok) {
+      if (allResults.length > 0) break;
       throw new Error(`Appfolio API error: ${response.status}`);
     }
 
     const data = await response.json();
-    const results = data.results || data.properties || [];
+    const results = data.results || [];
+    allResults.push(...results);
+
+    if (results.length < 200) break;
+    page++;
+  }
+
+  return allResults;
+}
+
+export async function fetchProperties(): Promise<Property[]> {
+  if (!isConfigured()) return [];
+
+  try {
+    const results = await fetchAllPages(
+      `${getBaseUrl()}/property_directory.json`
+    );
 
     return results.map((p: Record<string, any>) => ({
-      id: p.Property_id || p.property_id || p.id || String(Math.random()),
-      name: p.Property || p.name || "Unnamed Property",
-      address: p.Address || p.street_address || "",
-      city: p.City || p.city || "Los Angeles",
-      state: p.State || p.state || "CA",
-      zip: p.Zip || p.zip || "",
-      fullAddress: [
-        p.Address || p.street_address,
-        p.City || p.city,
-        `${p.State || p.state} ${p.Zip || p.zip}`,
-      ]
-        .filter(Boolean)
-        .join(", "),
-      description: p.Description || p.description || "",
-      amenities: p.Amenities || p.amenities || [],
-      photos: p.Photos || p.photos || [],
-      minRent: Number(p.Min_rent || p.min_rent) || 0,
-      maxRent: Number(p.Max_rent || p.max_rent) || 0,
-      availableUnits: Number(p.Available_unit_count || p.available_units) || 0,
-      totalUnits: Number(p.Unit_count || p.total_units) || 0,
+      id: String(p.PropertyId || p.Property_id || Math.random()),
+      name: p.PropertyName || p.Property || "Unnamed Property",
+      address: p.PropertyAddress || [p.PropertyStreet1, p.PropertyStreet2].filter(Boolean).join(" ") || "",
+      city: p.PropertyCity || "Los Angeles",
+      state: p.PropertyState || "CA",
+      zip: p.PropertyZip || "",
+      fullAddress: p.PropertyAddress || [
+        [p.PropertyStreet1, p.PropertyStreet2].filter(Boolean).join(" "),
+        p.PropertyCity,
+        `${p.PropertyState || "CA"} ${p.PropertyZip || ""}`,
+      ].filter(Boolean).join(", "),
+      description: p.Description || "",
+      amenities: p.Amenities ? String(p.Amenities).split(",").map((s: string) => s.trim()) : [],
+      photos: [],
+      minRent: parseFloat(String(p.MarketRent || "0").replace(/[,$]/g, "")) || 0,
+      maxRent: parseFloat(String(p.MarketRent || "0").replace(/[,$]/g, "")) || 0,
+      availableUnits: 0,
+      totalUnits: parseInt(String(p.Units || "0").replace(/,/g, ""), 10) || 0,
     }));
   } catch (error) {
     console.error("Error fetching properties:", error);
@@ -104,38 +113,36 @@ export async function fetchAvailableUnits(): Promise<Unit[]> {
   if (!isConfigured()) return [];
 
   try {
-    const url = new URL(`${getBaseUrl()}/unit_directory.json`);
-    url.searchParams.append("per_page", "100");
-    url.searchParams.append("available", "true");
+    // Use rent_roll report and filter for vacant units
+    const results = await fetchAllPages(
+      `${getBaseUrl()}/rent_roll.json`
+    );
 
-    const response = await fetch(url.toString(), {
-      headers: getAuthHeaders(),
-      next: { revalidate: 1800 }, // Cache for 30 minutes
+    // Filter for vacant units (where tenant is empty or status indicates vacancy)
+    const vacantUnits = results.filter((u: Record<string, any>) => {
+      const status = String(u.Status || u.OccupancyStatus || "").toLowerCase();
+      const tenant = String(u.Tenant || u.TenantName || "").trim();
+      return (
+        status.includes("vacant") ||
+        status.includes("available") ||
+        tenant === "" ||
+        tenant === "Vacant"
+      );
     });
 
-    if (!response.ok) {
-      throw new Error(`Appfolio API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const results = data.results || data.units || [];
-
-    return results.map((u: Record<string, any>) => ({
-      id: u.Unit_id || u.unit_id || u.id || String(Math.random()),
-      propertyId: u.Property_id || u.property_id || "",
-      propertyName: u.Property || u.property_name || "",
-      unitNumber: u.Unit_number || u.unit_number || "",
-      beds: Number(u.Bedrooms || u.bedrooms) || 0,
-      baths: Number(u.Bathrooms || u.bathrooms) || 0,
-      sqft: Number(u.Square_feet || u.square_feet) || 0,
-      rent: Number(u.Market_rent || u.market_rent || u.rent) || 0,
-      availableDate: u.Available_date || u.available_date || null,
-      availableNow:
-        !u.Available_date && !u.available_date
-          ? true
-          : new Date(u.Available_date || u.available_date) <= new Date(),
-      photos: u.Photos || u.photos || [],
-      address: u.Address || u.property_address || "",
+    return vacantUnits.map((u: Record<string, any>) => ({
+      id: String(u.UnitId || u.Unit_id || Math.random()),
+      propertyId: String(u.PropertyId || u.Property_id || ""),
+      propertyName: u.PropertyName || u.Property || "",
+      unitNumber: u.UnitName || u.Unit || u.UnitNumber || "",
+      beds: parseInt(String(u.Bedrooms || u.Beds || "0"), 10) || 0,
+      baths: parseFloat(String(u.Bathrooms || u.Baths || "0")) || 0,
+      sqft: parseInt(String(u.SqFt || u.SquareFeet || "0").replace(/,/g, ""), 10) || 0,
+      rent: parseFloat(String(u.MarketRent || u.Rent || u.ActualRent || "0").replace(/[,$]/g, "")) || 0,
+      availableDate: u.AvailableDate || u.MoveOutDate || null,
+      availableNow: true,
+      photos: [],
+      address: u.PropertyAddress || [u.PropertyStreet1, u.PropertyStreet2].filter(Boolean).join(" ") || "",
     }));
   } catch (error) {
     console.error("Error fetching units:", error);
