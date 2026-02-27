@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,64 +13,111 @@ import {
 
 const featuredProperties = [
   {
-    name: "The Vermont",
+    id: "9be44f86-b345-4126-aa5f-e3bf34813968",
+    name: "Portland Street",
     neighborhood: "University Park",
-    address: "Near USC Campus",
-    price: "$2,200",
-    beds: "1-2",
-    baths: "1",
+    address: "2714 Portland St",
+    price: "$5,595",
+    beds: "3",
+    baths: "3",
+    sqft: "955",
     image:
-      "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=800&q=80",
-    tag: "Popular",
+      "https://images.cdn.appfolio.com/mbtenants/images/3920c0d6-4837-43f0-bb16-796e73aca7c6/large.jpg",
+    tag: "Furnished",
+    description:
+      "Premium furnished apartments with private patio, gated parking, and surveillance.",
   },
   {
-    name: "The Wilshire",
-    neighborhood: "Mid-Wilshire",
-    address: "Wilshire Corridor",
-    price: "$2,800",
-    beds: "1-3",
-    baths: "1-2",
+    id: "c1f56d1f-e834-44f6-917d-bd146e3242a3",
+    name: "Ellendale Place",
+    neighborhood: "University Park",
+    address: "2728 Ellendale Pl",
+    price: "$4,150",
+    beds: "3",
+    baths: "2",
     image:
-      "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80",
-    tag: "Newly Renovated",
+      "https://images.cdn.appfolio.com/mbtenants/images/b3a002b5-8fb0-461f-baaf-368818b08360/large.jpg",
+    tag: "Tree-Lined Street",
+    description:
+      "Spacious apartments on a quiet, tree-lined street with wood flooring and modern kitchens.",
   },
   {
-    name: "The Adams",
-    neighborhood: "West Adams",
-    address: "Historic West Adams",
-    price: "$2,500",
-    beds: "2-3",
-    baths: "1-2",
+    id: "ec5d5e7e-c6f1-4c71-80ff-e4d1befdfa52",
+    name: "W 23rd Street",
+    neighborhood: "University Park",
+    address: "707 W 23rd St",
+    price: "$3,999",
+    beds: "4",
+    baths: "3.5",
+    sqft: "2,039",
     image:
-      "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=800&q=80",
-    tag: "Available Now",
+      "https://images.cdn.appfolio.com/mbtenants/images/c3685716-2b78-4347-88e4-dad7ee8d60ff/large.jpg",
+    tag: "Spacious",
+    description:
+      "Gated parking, in-unit laundry, keyless entry, and room A/C units near campus.",
   },
 ];
 
-const neighborhoods = [
+const allListings = [
   {
-    name: "University Park",
-    description: "Steps from USC",
+    address: "909 W 30th St",
+    unit: "Unit 2",
+    beds: "Studio",
+    baths: "1",
+    rent: "$1,995",
+    available: "Aug 1",
     image:
-      "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?auto=format&fit=crop&w=600&q=80",
+      "https://images.cdn.appfolio.com/mbtenants/images/6168a921-b217-41f6-a275-760a92c91111/large.jpg",
   },
   {
-    name: "Mid-Wilshire",
-    description: "Heart of LA",
+    address: "1121 28th St",
+    unit: "",
+    beds: "4",
+    baths: "4",
+    rent: "$5,999",
+    available: "Aug 15",
     image:
-      "https://images.unsplash.com/photo-1515896769750-31548aa180ed?auto=format&fit=crop&w=600&q=80",
+      "https://images.cdn.appfolio.com/mbtenants/images/cca84c0e-ab19-4982-9518-711b70f41c44/large.jpg",
   },
   {
-    name: "Koreatown",
-    description: "Vibrant & Connected",
+    address: "2670 Ellendale Pl",
+    unit: "",
+    beds: "2 + Den",
+    baths: "1",
+    rent: "$3,350",
+    available: "Aug 15",
     image:
-      "https://images.unsplash.com/photo-1580655653885-65763b2597d0?auto=format&fit=crop&w=600&q=80",
+      "https://images.cdn.appfolio.com/mbtenants/images/dc4338e1-3ad5-4a75-b1c9-f798907d1c08/large.jpg",
   },
   {
-    name: "West Adams",
-    description: "Historic Charm",
+    address: "643 W 30th St",
+    unit: "Unit 1",
+    beds: "Studio",
+    baths: "1",
+    rent: "$1,895",
+    available: "Aug 15",
     image:
-      "https://images.unsplash.com/photo-1449844908441-8829872d2607?auto=format&fit=crop&w=600&q=80",
+      "https://images.cdn.appfolio.com/mbtenants/leads_marketing_photos/540ec344-c4bc-47c1-8906-3cbed09992c0/original.jpg",
+  },
+  {
+    address: "2801 Orchard Ave",
+    unit: "Unit 10",
+    beds: "2",
+    baths: "1",
+    rent: "$3,099",
+    available: "Aug 15",
+    image:
+      "https://images.cdn.appfolio.com/mbtenants/leads_marketing_photos/846952bd-d01c-4928-87eb-bdedfb65c0c4/original.jpg",
+  },
+  {
+    address: "1137 W 29th St",
+    unit: "Unit 5",
+    beds: "1",
+    baths: "1",
+    rent: "$1,949",
+    available: "Aug 15",
+    image:
+      "https://images.cdn.appfolio.com/mbtenants/leads_marketing_photos/9966fd0f-ab3a-4f99-88f9-90d9d21bdbbb/original.jpg",
   },
 ];
 
@@ -98,9 +144,8 @@ export default function HomePage() {
               <span className="block text-amber-400">LA Comes Alive</span>
             </h1>
             <p className="text-lg text-white/80 mb-10 max-w-lg leading-relaxed">
-              Curated apartments in LA&apos;s most sought-after neighborhoods.
-              Professionally managed. Beautifully maintained. Unmistakably Los
-              Angeles.
+              Curated apartments near USC and across Los Angeles. Professionally
+              managed. Beautifully maintained. Unmistakably Los Angeles.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Button
@@ -154,7 +199,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Featured Properties */}
+      {/* Featured Properties - Real Appfolio Data */}
       <section className="py-20 md:py-28 bg-white">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between mb-12">
@@ -176,10 +221,11 @@ export default function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {featuredProperties.map((property, i) => (
+            {featuredProperties.map((property) => (
               <Link
-                key={i}
-                href={`/properties/${i + 1}`}
+                key={property.id}
+                href={`https://mbtenants.appfolio.com/listings/detail/${property.id}`}
+                target="_blank"
                 className="group cursor-pointer"
               >
                 <div className="rounded-2xl overflow-hidden bg-white border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300">
@@ -196,17 +242,18 @@ export default function HomePage() {
                     </div>
                   </div>
                   <div className="p-6">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h3 className="font-bold text-lg text-slate-900 group-hover:text-amber-700 transition-colors">
-                          {property.name}
-                        </h3>
-                        <div className="flex items-center text-sm text-slate-500 mt-1">
-                          <MapPin className="h-3.5 w-3.5 mr-1" />
-                          {property.neighborhood} &middot; {property.address}
-                        </div>
+                    <div className="mb-2">
+                      <h3 className="font-bold text-lg text-slate-900 group-hover:text-amber-700 transition-colors">
+                        {property.address}
+                      </h3>
+                      <div className="flex items-center text-sm text-slate-500 mt-1">
+                        <MapPin className="h-3.5 w-3.5 mr-1" />
+                        {property.neighborhood} &middot; Los Angeles, CA
                       </div>
                     </div>
+                    <p className="text-slate-600 text-sm mt-3 line-clamp-2">
+                      {property.description}
+                    </p>
                     <div className="flex items-center gap-4 text-sm text-slate-500 mt-4 pt-4 border-t border-slate-100">
                       <span className="flex items-center gap-1.5">
                         <Bed className="h-4 w-4" />
@@ -216,8 +263,13 @@ export default function HomePage() {
                         <Bath className="h-4 w-4" />
                         {property.baths} Bath
                       </span>
+                      {property.sqft && (
+                        <span className="text-xs text-slate-400">
+                          {property.sqft} sqft
+                        </span>
+                      )}
                       <span className="ml-auto font-bold text-lg text-slate-900">
-                        From {property.price}
+                        {property.price}
                         <span className="text-sm font-normal text-slate-500">
                           /mo
                         </span>
@@ -231,46 +283,101 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Neighborhoods Section */}
+      {/* Available Now - Real Listings */}
       <section className="py-20 md:py-28 bg-slate-50">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-14">
-            <p className="text-amber-600 font-medium tracking-widest uppercase text-sm mb-2">
-              Neighborhoods
-            </p>
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-              Prime LA Locations
-            </h2>
-            <p className="text-slate-600 max-w-xl mx-auto">
-              Our properties are in the neighborhoods you want to live in —
-              close to dining, culture, transit, and everything LA has to offer.
-            </p>
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between mb-12">
+            <div>
+              <p className="text-amber-600 font-medium tracking-widest uppercase text-sm mb-2">
+                Available Now
+              </p>
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-2">
+                Current Listings
+              </h2>
+              <p className="text-slate-600">
+                15+ units available across Los Angeles
+              </p>
+            </div>
+            <Link
+              href="https://mbtenants.appfolio.com/listings"
+              target="_blank"
+              className="text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1 mt-4 md:mt-0"
+            >
+              See all availability
+              <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {neighborhoods.map((hood, i) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {allListings.map((listing, i) => (
               <Link
                 key={i}
-                href="/properties"
-                className="group relative aspect-[3/4] rounded-2xl overflow-hidden"
+                href="https://mbtenants.appfolio.com/listings"
+                target="_blank"
+                className="group"
               >
-                <img
-                  src={hood.image}
-                  alt={hood.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-5">
-                  <h3 className="text-white font-bold text-lg">{hood.name}</h3>
-                  <p className="text-white/70 text-sm">{hood.description}</p>
+                <div className="bg-white rounded-xl overflow-hidden border border-slate-100 hover:shadow-lg transition-all duration-300">
+                  <div className="aspect-[16/10] relative overflow-hidden">
+                    <img
+                      src={listing.image}
+                      alt={listing.address}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute top-3 right-3">
+                      <span className="bg-emerald-500 text-white text-xs font-medium px-2.5 py-1 rounded-full">
+                        {listing.available}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-5">
+                    <h3 className="font-semibold text-slate-900 group-hover:text-amber-700 transition-colors">
+                      {listing.address}
+                      {listing.unit ? ` - ${listing.unit}` : ""}
+                    </h3>
+                    <div className="flex items-center text-sm text-slate-500 mt-1">
+                      <MapPin className="h-3.5 w-3.5 mr-1" />
+                      Los Angeles, CA
+                    </div>
+                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100">
+                      <div className="flex items-center gap-3 text-sm text-slate-500">
+                        <span className="flex items-center gap-1">
+                          <Bed className="h-3.5 w-3.5" />
+                          {listing.beds} Bd
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Bath className="h-3.5 w-3.5" />
+                          {listing.baths} Ba
+                        </span>
+                      </div>
+                      <span className="font-bold text-slate-900">
+                        {listing.rent}
+                        <span className="text-xs font-normal text-slate-500">
+                          /mo
+                        </span>
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </Link>
             ))}
           </div>
+
+          <div className="text-center mt-12">
+            <Button
+              size="lg"
+              asChild
+              className="bg-amber-500 hover:bg-amber-600 text-black font-semibold px-8"
+            >
+              <Link href="https://mbtenants.appfolio.com/listings" target="_blank">
+                View All 15+ Listings
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
         </div>
       </section>
 
-      {/* Why Moxie Section */}
+      {/* Why Moxie Section - with real property photos */}
       <section className="py-20 md:py-28 bg-white">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
@@ -294,7 +401,7 @@ export default function HomePage() {
                     icon: Shield,
                     title: "Quality You Can Trust",
                     description:
-                      "Every property is well-maintained with regular upgrades and professional upkeep.",
+                      "Every property is well-maintained with regular upgrades, gated entry, and surveillance cameras.",
                   },
                   {
                     icon: Clock,
@@ -304,9 +411,9 @@ export default function HomePage() {
                   },
                   {
                     icon: Star,
-                    title: "Curated Living",
+                    title: "Near Campus Living",
                     description:
-                      "We hand-select our properties in LA's best neighborhoods for location, quality, and value.",
+                      "Properties steps from USC and across LA — furnished options, in-unit laundry, and pet-friendly.",
                   },
                 ].map((feature, i) => (
                   <div key={i} className="flex gap-5">
@@ -326,20 +433,20 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Image collage */}
+            {/* Photo collage with actual Appfolio property photos */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-4">
                 <div className="aspect-[3/4] rounded-2xl overflow-hidden">
                   <img
-                    src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=600&q=80"
-                    alt="Modern apartment interior with natural light"
+                    src="https://images.cdn.appfolio.com/mbtenants/leads_marketing_photos/627485f5-1b39-446f-8b17-3ca9fa940297/original.jpg"
+                    alt="Portland Street furnished interior"
                     className="w-full h-full object-cover"
                   />
                 </div>
                 <div className="aspect-[4/3] rounded-2xl overflow-hidden">
                   <img
-                    src="https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=600&q=80"
-                    alt="Bright living room with modern furnishings"
+                    src="https://images.cdn.appfolio.com/mbtenants/leads_marketing_photos/217e5f2b-54b5-412c-995d-e3186cb3127c/original.jpg"
+                    alt="Ellendale Place apartment interior"
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -347,15 +454,15 @@ export default function HomePage() {
               <div className="space-y-4 pt-8">
                 <div className="aspect-[4/3] rounded-2xl overflow-hidden">
                   <img
-                    src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80"
-                    alt="Premium property exterior"
+                    src="https://images.cdn.appfolio.com/mbtenants/images/0c2f9757-e246-49fc-8b80-e5e52e67de10/large.jpg"
+                    alt="Portland Street property exterior"
                     className="w-full h-full object-cover"
                   />
                 </div>
                 <div className="aspect-[3/4] rounded-2xl overflow-hidden">
                   <img
-                    src="https://images.unsplash.com/photo-1600607687644-c7171b42498f?auto=format&fit=crop&w=600&q=80"
-                    alt="Beautiful apartment kitchen"
+                    src="https://images.cdn.appfolio.com/mbtenants/leads_marketing_photos/8cce85fb-2ead-4d05-abac-55cfb3630329/original.jpg"
+                    alt="W 23rd Street interior"
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -441,7 +548,7 @@ export default function HomePage() {
               asChild
               className="bg-amber-500 hover:bg-amber-600 text-black font-semibold px-8 h-12"
             >
-              <Link href="/availability">
+              <Link href="https://mbtenants.appfolio.com/listings" target="_blank">
                 View Available Units
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
