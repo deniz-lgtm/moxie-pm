@@ -25,7 +25,7 @@ async function getProperty(id: string) {
     availableUnits: [
       { unit: "1A", beds: 1, baths: 1, sqft: 700, price: "$2,500", available: "Now" },
       { unit: "2B", beds: 2, baths: 1, sqft: 900, price: "$3,200", available: "Mar 1" },
-      { unit: "3C", beds: 2, baths: 2, sqft: 1,100, price: "$3,500", available: "Mar 15" },
+      { unit: "3C", beds: 2, baths: 2, sqft: 1100, price: "$3,500", available: "Mar 15" },
     ],
   };
 }
