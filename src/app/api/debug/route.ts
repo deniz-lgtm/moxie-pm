@@ -12,85 +12,67 @@ export async function GET() {
 
   const results: Record<string, unknown> = {};
 
-  // Test v1 rent_roll (for vacancy data)
+  // Fetch ALL rent_roll entries and group by Status
   try {
-    const url = `https://${database}/api/v1/reports/rent_roll.json?per_page=10&paginate_results=true`;
-    const res = await fetch(url, { headers, cache: "no-store" });
-    if (res.ok) {
+    const allUnits: Record<string, any>[] = [];
+    let page = 1;
+    while (true) {
+      const url = `https://${database}/api/v1/reports/rent_roll.json?paginate_results=true&per_page=200&page=${page}`;
+      const res = await fetch(url, { headers, cache: "no-store" });
+      if (!res.ok) break;
       const data = await res.json();
-      results["v1_rent_roll"] = {
-        status: 200,
-        totalResults: data.results?.length,
-        keys: data.results?.[0] ? Object.keys(data.results[0]) : [],
-        firstTwo: data.results?.slice(0, 2),
-      };
-    } else {
-      const text = await res.text();
-      results["v1_rent_roll"] = { status: res.status, body: text.slice(0, 500) };
+      const batch = data.results || [];
+      allUnits.push(...batch);
+      if (batch.length < 200) break;
+      page++;
     }
+
+    // Group by status
+    const statusCounts: Record<string, number> = {};
+    for (const u of allUnits) {
+      const s = u.Status || "unknown";
+      statusCounts[s] = (statusCounts[s] || 0) + 1;
+    }
+
+    // Find vacant/notice units
+    const vacantUnits = allUnits.filter(
+      (u) => u.Status === "Vacant" || u.Status === "Notice" || u.Status === "Past"
+    );
+
+    results["rent_roll_summary"] = {
+      total: allUnits.length,
+      statusCounts,
+      vacantCount: vacantUnits.length,
+      vacantSample: vacantUnits.slice(0, 3),
+    };
   } catch (e) {
-    results["v1_rent_roll"] = { error: String(e) };
+    results["rent_roll_summary"] = { error: String(e) };
   }
 
-  // Test v1 listings endpoint (non-report)
+  // Find units posted to website from unit_directory
   try {
-    const url = `https://${database}/api/v1/listings.json?per_page=10`;
-    const res = await fetch(url, { headers, cache: "no-store" });
-    if (res.ok) {
+    const allUnits: Record<string, any>[] = [];
+    let page = 1;
+    while (true) {
+      const url = `https://${database}/api/v1/reports/unit_directory.json?paginate_results=true&per_page=200&page=${page}`;
+      const res = await fetch(url, { headers, cache: "no-store" });
+      if (!res.ok) break;
       const data = await res.json();
-      const items = Array.isArray(data) ? data : data.results || data.listings || [];
-      results["v1_listings"] = {
-        status: 200,
-        totalResults: items.length,
-        keys: items[0] ? Object.keys(items[0]) : [],
-        firstTwo: items.slice(0, 2),
-      };
-    } else {
-      const text = await res.text();
-      results["v1_listings"] = { status: res.status, body: text.slice(0, 500) };
+      const batch = data.results || [];
+      allUnits.push(...batch);
+      if (batch.length < 200) break;
+      page++;
     }
-  } catch (e) {
-    results["v1_listings"] = { error: String(e) };
-  }
 
-  // Test v2 listings endpoint
-  try {
-    const url = `https://${database}/api/v2/listings.json?per_page=10`;
-    const res = await fetch(url, { headers, cache: "no-store" });
-    if (res.ok) {
-      const data = await res.json();
-      const items = Array.isArray(data) ? data : data.results || data.listings || [];
-      results["v2_listings"] = {
-        status: 200,
-        totalResults: items.length,
-        keys: items[0] ? Object.keys(items[0]) : [],
-        firstTwo: items.slice(0, 2),
-      };
-    } else {
-      const text = await res.text();
-      results["v2_listings"] = { status: res.status, body: text.slice(0, 500) };
-    }
-  } catch (e) {
-    results["v2_listings"] = { error: String(e) };
-  }
+    const postedUnits = allUnits.filter((u) => u.PostedToWebsite === "Yes");
 
-  // Test v1 unit_directory (might exist)
-  try {
-    const url = `https://${database}/api/v1/reports/unit_directory.json?per_page=5&paginate_results=true`;
-    const res = await fetch(url, { headers, cache: "no-store" });
-    if (res.ok) {
-      const data = await res.json();
-      results["v1_unit_directory"] = {
-        status: 200,
-        totalResults: data.results?.length,
-        keys: data.results?.[0] ? Object.keys(data.results[0]) : [],
-        firstTwo: data.results?.slice(0, 2),
-      };
-    } else {
-      results["v1_unit_directory"] = { status: res.status };
-    }
+    results["unit_directory_summary"] = {
+      total: allUnits.length,
+      postedToWebsite: postedUnits.length,
+      postedSample: postedUnits.slice(0, 5),
+    };
   } catch (e) {
-    results["v1_unit_directory"] = { error: String(e) };
+    results["unit_directory_summary"] = { error: String(e) };
   }
 
   return NextResponse.json({ results }, { status: 200 });
