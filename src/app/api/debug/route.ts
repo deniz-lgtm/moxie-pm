@@ -9,51 +9,51 @@ export async function GET() {
   };
 
   const database = process.env.APPFOLIO_DATABASE || "mbtenants.appfolio.com";
-  const baseUrl = `https://${database}/api/v2/reports`;
+  const credentials = Buffer.from(
+    `${process.env.APPFOLIO_CLIENT_ID}:${process.env.APPFOLIO_CLIENT_SECRET}`
+  ).toString("base64");
 
-  let apiResult: Record<string, unknown> = {};
+  const headers = {
+    Authorization: `Basic ${credentials}`,
+    "Content-Type": "application/json",
+  };
 
-  if (config.clientId === "SET" && config.clientSecret === "SET") {
-    const credentials = Buffer.from(
-      `${process.env.APPFOLIO_CLIENT_ID}:${process.env.APPFOLIO_CLIENT_SECRET}`
-    ).toString("base64");
+  // Try multiple possible Appfolio API endpoints
+  const endpoints = [
+    `/api/v2/reports/property_directory.json?per_page=2`,
+    `/api/v2/reports/rent_roll.json?per_page=2`,
+    `/api/v2/reports/vacant_units.json?per_page=2`,
+    `/api/v2/reports/unit_directory.json?per_page=2`,
+    `/api/v2/reports/work_order.json?per_page=2`,
+    `/api/v1/reports/property_directory.json?per_page=2`,
+    `/api/v1/reports/vacant_units.json?per_page=2`,
+  ];
 
+  const results: Record<string, unknown> = {};
+
+  for (const endpoint of endpoints) {
+    const url = `https://${database}${endpoint}`;
     try {
-      const url = new URL(`${baseUrl}/property_directory.json`);
-      url.searchParams.append("per_page", "5");
-      if (process.env.APPFOLIO_PORTFOLIO_TAG) {
-        url.searchParams.append("tags", process.env.APPFOLIO_PORTFOLIO_TAG);
-      }
-
-      const response = await fetch(url.toString(), {
-        headers: {
-          Authorization: `Basic ${credentials}`,
-          "Content-Type": "application/json",
-        },
-        cache: "no-store",
-      });
-
-      apiResult = {
-        status: response.status,
-        statusText: response.statusText,
-        url: url.toString().replace(/Basic .+/, "Basic [REDACTED]"),
-        headers: Object.fromEntries(response.headers.entries()),
-      };
-
+      const response = await fetch(url, { headers, cache: "no-store" });
       if (response.ok) {
         const data = await response.json();
-        apiResult.dataKeys = Object.keys(data);
-        apiResult.sampleData = JSON.stringify(data).slice(0, 2000);
+        results[endpoint] = {
+          status: response.status,
+          keys: Object.keys(data),
+          preview: JSON.stringify(data).slice(0, 1500),
+        };
       } else {
-        const text = await response.text();
-        apiResult.errorBody = text.slice(0, 1000);
+        results[endpoint] = {
+          status: response.status,
+          statusText: response.statusText,
+        };
       }
     } catch (error) {
-      apiResult = {
+      results[endpoint] = {
         error: error instanceof Error ? error.message : String(error),
       };
     }
   }
 
-  return NextResponse.json({ config, apiResult }, { status: 200 });
+  return NextResponse.json({ config, results }, { status: 200 });
 }
