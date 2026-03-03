@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { fetchProperties, fetchAvailableUnits } from "@/lib/appfolio";
-import { Property, Unit } from "@/types";
+import { fetchAvailableUnits } from "@/lib/appfolio";
+import { Unit } from "@/types";
 import {
   ArrowRight,
   Shield,
@@ -16,114 +16,61 @@ import {
 // Revalidate every hour so listings stay fresh
 export const revalidate = 3600;
 
-// Fallback data when API is not configured
-const fallbackProperties = [
-  {
-    id: "9be44f86-b345-4126-aa5f-e3bf34813968",
-    address: "2714 Portland St",
-    city: "Los Angeles",
-    beds: "3",
-    baths: "3",
-    sqft: 955,
-    price: "$5,595",
-    image:
-      "https://images.cdn.appfolio.com/mbtenants/images/3920c0d6-4837-43f0-bb16-796e73aca7c6/large.jpg",
-    tag: "Furnished",
-    description:
-      "Premium furnished apartments with private patio, gated parking, and surveillance.",
-  },
-  {
-    id: "c1f56d1f-e834-44f6-917d-bd146e3242a3",
-    address: "2728 Ellendale Pl",
-    city: "Los Angeles",
-    beds: "3",
-    baths: "2",
-    sqft: 0,
-    price: "$4,150",
-    image:
-      "https://images.cdn.appfolio.com/mbtenants/images/b3a002b5-8fb0-461f-baaf-368818b08360/large.jpg",
-    tag: "Tree-Lined Street",
-    description:
-      "Spacious apartments on a quiet, tree-lined street with wood flooring and modern kitchens.",
-  },
-  {
-    id: "ec5d5e7e-c6f1-4c71-80ff-e4d1befdfa52",
-    address: "707 W 23rd St",
-    city: "Los Angeles",
-    beds: "4",
-    baths: "3.5",
-    sqft: 2039,
-    price: "$3,999",
-    image:
-      "https://images.cdn.appfolio.com/mbtenants/images/c3685716-2b78-4347-88e4-dad7ee8d60ff/large.jpg",
-    tag: "Spacious",
-    description:
-      "Gated parking, in-unit laundry, keyless entry, and room A/C units near campus.",
-  },
-];
+// Photo lookup by RentableUid (listingId) — scraped from Appfolio listing pages
+const photosByListingId: Record<string, string> = {
+  // 2714 Portland St - Oasis at the ROW
+  "9be44f86-b345-4126-aa5f-e3bf34813968":
+    "https://images.cdn.appfolio.com/mbtenants/images/3920c0d6-4837-43f0-bb16-796e73aca7c6/large.jpg",
+  // 2728 Ellendale Place Unit 5 - Trojan House
+  "c1f56d1f-e834-44f6-917d-bd146e3242a3":
+    "https://images.cdn.appfolio.com/mbtenants/images/b3a002b5-8fb0-461f-baaf-368818b08360/large.jpg",
+  // 707 W 23rd St
+  "ec5d5e7e-c6f1-4c71-80ff-e4d1befdfa52":
+    "https://images.cdn.appfolio.com/mbtenants/images/c3685716-2b78-4347-88e4-dad7ee8d60ff/large.jpg",
+  // 909 W 30th St Unit 2
+  "2733c98c-c839-49f8-a00a-fa4d7d1a739d":
+    "https://images.cdn.appfolio.com/mbtenants/images/6168a921-b217-41f6-a275-760a92c91111/large.jpg",
+  // 1121 28th St - The Hidden Gem
+  "6f5eb389-dac9-4fa2-b3eb-45909c5c82e5":
+    "https://images.cdn.appfolio.com/mbtenants/images/cca84c0e-ab19-4982-9518-711b70f41c44/large.jpg",
+  // 2670 Ellendale Pl - Oasis West
+  "4ae0fc0d-81b2-4e81-984d-60c14cff77ca":
+    "https://images.cdn.appfolio.com/mbtenants/images/dc4338e1-3ad5-4a75-b1c9-f798907d1c08/large.jpg",
+  // 643 W 30th St Unit 1
+  "10f90bc9-aa70-4f7f-92e9-6b9d2ad04b60":
+    "https://images.cdn.appfolio.com/mbtenants/leads_marketing_photos/540ec344-c4bc-47c1-8906-3cbed09992c0/original.jpg",
+  // 2801 Orchard Ave Unit 10
+  "f2f2cdce-6826-43fe-aaac-0e1d7a41c35e":
+    "https://images.cdn.appfolio.com/mbtenants/leads_marketing_photos/846952bd-d01c-4928-87eb-bdedfb65c0c4/original.jpg",
+  // 1137 W 29th St Unit 5 - Sunshine Shack
+  "e54032b3-bf92-4321-a620-a8c760f460ad":
+    "https://images.cdn.appfolio.com/mbtenants/leads_marketing_photos/9966fd0f-ab3a-4f99-88f9-90d9d21bdbbb/original.jpg",
+  // 2801 Orchard Ave Unit 2
+  "8bebc4ab-3241-4583-bb11-6130b220ad00":
+    "https://images.cdn.appfolio.com/mbtenants/leads_marketing_photos/846952bd-d01c-4928-87eb-bdedfb65c0c4/original.jpg",
+  // 643 W 30th St Unit 17
+  "19f0d7dd-4a13-49f9-9d42-4674cfd14fca":
+    "https://images.cdn.appfolio.com/mbtenants/leads_marketing_photos/540ec344-c4bc-47c1-8906-3cbed09992c0/original.jpg",
+  // 1013 W 24th St
+  "0f957893-75f1-4580-a41a-7b4c59d11231":
+    "https://images.cdn.appfolio.com/mbtenants/images/c3685716-2b78-4347-88e4-dad7ee8d60ff/large.jpg",
+  // 1118 3/4 W 30th St - Hula House
+  "4f94d3a6-895a-4a99-9a62-493e61a973cb":
+    "https://images.cdn.appfolio.com/mbtenants/images/6168a921-b217-41f6-a275-760a92c91111/large.jpg",
+  // 1173 W 29th St Unit 1
+  "4766c2c1-699f-4947-a854-cd50179bc4b3":
+    "https://images.cdn.appfolio.com/mbtenants/leads_marketing_photos/9966fd0f-ab3a-4f99-88f9-90d9d21bdbbb/original.jpg",
+  // 2728 Ellendale Place Unit 9 - Trojan House
+  "02400e78-0362-4bd5-bde5-12e5c21561f6":
+    "https://images.cdn.appfolio.com/mbtenants/images/b3a002b5-8fb0-461f-baaf-368818b08360/large.jpg",
+};
 
-const fallbackUnits = [
-  {
-    address: "909 W 30th St",
-    unit: "Unit 2",
-    beds: "Studio",
-    baths: "1",
-    rent: "$1,995",
-    available: "Aug 1",
-    image:
-      "https://images.cdn.appfolio.com/mbtenants/images/6168a921-b217-41f6-a275-760a92c91111/large.jpg",
-  },
-  {
-    address: "1121 28th St",
-    unit: "",
-    beds: "4",
-    baths: "4",
-    rent: "$5,999",
-    available: "Aug 15",
-    image:
-      "https://images.cdn.appfolio.com/mbtenants/images/cca84c0e-ab19-4982-9518-711b70f41c44/large.jpg",
-  },
-  {
-    address: "2670 Ellendale Pl",
-    unit: "",
-    beds: "2 + Den",
-    baths: "1",
-    rent: "$3,350",
-    available: "Aug 15",
-    image:
-      "https://images.cdn.appfolio.com/mbtenants/images/dc4338e1-3ad5-4a75-b1c9-f798907d1c08/large.jpg",
-  },
-  {
-    address: "643 W 30th St",
-    unit: "Unit 1",
-    beds: "Studio",
-    baths: "1",
-    rent: "$1,895",
-    available: "Aug 15",
-    image:
-      "https://images.cdn.appfolio.com/mbtenants/leads_marketing_photos/540ec344-c4bc-47c1-8906-3cbed09992c0/original.jpg",
-  },
-  {
-    address: "2801 Orchard Ave",
-    unit: "Unit 10",
-    beds: "2",
-    baths: "1",
-    rent: "$3,099",
-    available: "Aug 15",
-    image:
-      "https://images.cdn.appfolio.com/mbtenants/leads_marketing_photos/846952bd-d01c-4928-87eb-bdedfb65c0c4/original.jpg",
-  },
-  {
-    address: "1137 W 29th St",
-    unit: "Unit 5",
-    beds: "1",
-    baths: "1",
-    rent: "$1,949",
-    available: "Aug 15",
-    image:
-      "https://images.cdn.appfolio.com/mbtenants/leads_marketing_photos/9966fd0f-ab3a-4f99-88f9-90d9d21bdbbb/original.jpg",
-  },
-];
+const defaultPhoto =
+  "https://images.cdn.appfolio.com/mbtenants/images/3920c0d6-4837-43f0-bb16-796e73aca7c6/large.jpg";
+
+function getPhoto(unit: Unit): string {
+  return photosByListingId[unit.listingId] || defaultPhoto;
+}
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return "Now";
@@ -132,50 +79,32 @@ function formatDate(dateStr: string | null): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function mapPropertiesToCards(properties: Property[]) {
-  return properties.slice(0, 3).map((p) => ({
-    id: p.id,
-    address: p.address,
-    city: p.city || "Los Angeles",
-    beds: String(p.totalUnits > 0 ? `1-${Math.min(p.totalUnits, 4)}` : "1+"),
-    baths: "1+",
-    sqft: 0,
-    price: p.minRent > 0 ? `$${p.minRent.toLocaleString()}` : "Call",
-    image: p.photos?.[0] || fallbackProperties[0].image,
-    tag: p.availableUnits > 0 ? `${p.availableUnits} Available` : "Leasing",
-    description: p.description || p.name,
-  }));
+function formatAddress(addr: string): string {
+  // Remove city/state/zip suffix for display
+  return addr.replace(/\s+(Los Angeles|LA),?\s*CA\s*\d*/i, "").trim();
 }
 
-function mapUnitsToCards(units: Unit[]) {
-  return units.slice(0, 6).map((u) => ({
-    address: u.address || u.propertyName,
-    unit: u.unitNumber ? `Unit ${u.unitNumber}` : "",
-    beds: u.beds === 0 ? "Studio" : String(u.beds),
-    baths: String(u.baths),
-    rent: u.rent > 0 ? `$${u.rent.toLocaleString()}` : "Call",
-    available: formatDate(u.availableDate),
-    image: u.photos?.[0] || fallbackUnits[0].image,
-  }));
+function getListingUrl(unit: Unit): string {
+  if (unit.listingId) {
+    return `https://mbtenants.appfolio.com/listings/detail/${unit.listingId}`;
+  }
+  return "https://mbtenants.appfolio.com/listings";
+}
+
+// Pick featured listings: highest rent first (premium properties)
+function getFeatured(units: Unit[]): Unit[] {
+  return [...units]
+    .sort((a, b) => b.rent - a.rent)
+    .slice(0, 3);
 }
 
 export default async function HomePage() {
-  // Fetch live data from Appfolio API (filtered by "Moxie PM" portfolio tag)
-  const [apiProperties, apiUnits] = await Promise.all([
-    fetchProperties(),
-    fetchAvailableUnits(),
-  ]);
+  const apiUnits = await fetchAvailableUnits();
 
-  // Use API data if available, otherwise fall back to hardcoded listings
-  const properties =
-    apiProperties.length > 0
-      ? mapPropertiesToCards(apiProperties)
-      : fallbackProperties;
-  const units =
-    apiUnits.length > 0 ? mapUnitsToCards(apiUnits) : fallbackUnits;
-  const totalUnits =
-    apiUnits.length > 0 ? apiUnits.length : fallbackUnits.length;
-  const isLive = apiProperties.length > 0 || apiUnits.length > 0;
+  const hasLiveData = apiUnits.length > 0;
+  const featured = hasLiveData ? getFeatured(apiUnits) : [];
+  const listings = hasLiveData ? apiUnits : [];
+  const totalListings = listings.length;
 
   return (
     <div className="flex flex-col">
@@ -208,7 +137,7 @@ export default async function HomePage() {
                 asChild
                 className="bg-amber-500 hover:bg-amber-600 text-black font-semibold px-8 h-12"
               >
-                <Link href="/availability">
+                <Link href="https://mbtenants.appfolio.com/listings" target="_blank">
                   View Available Units
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
@@ -219,7 +148,10 @@ export default async function HomePage() {
                 asChild
                 className="border-white/30 text-white hover:bg-white/10 h-12 px-8"
               >
-                <Link href="/properties">Explore Properties</Link>
+                <a href="tel:310-362-8105" className="flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  310-362-8105
+                </a>
               </Button>
             </div>
           </div>
@@ -238,7 +170,7 @@ export default async function HomePage() {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-0 divide-x divide-white/10">
             {[
-              { value: "50+", label: "Properties Managed" },
+              { value: hasLiveData ? `${totalListings}` : "50+", label: hasLiveData ? "Units Available" : "Properties Managed" },
               { value: "1,200+", label: "Happy Residents" },
               { value: "7+", label: "Years in LA" },
               { value: "24hr", label: "Maintenance Response" },
@@ -267,7 +199,8 @@ export default async function HomePage() {
               </h2>
             </div>
             <Link
-              href="/properties"
+              href="https://mbtenants.appfolio.com/listings"
+              target="_blank"
               className="text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1 mt-4 md:mt-0"
             >
               View all properties
@@ -276,59 +209,56 @@ export default async function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {properties.map((property) => (
-              <Link
-                key={property.id}
-                href={
-                  isLive
-                    ? `/properties/${property.id}`
-                    : `https://mbtenants.appfolio.com/listings/detail/${property.id}`
-                }
-                target={isLive ? undefined : "_blank"}
+            {featured.map((unit) => (
+              <a
+                key={unit.id}
+                href={getListingUrl(unit)}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="group cursor-pointer"
               >
                 <div className="rounded-2xl overflow-hidden bg-white border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300">
                   <div className="aspect-[4/3] relative overflow-hidden">
                     <img
-                      src={property.image}
-                      alt={property.address}
+                      src={getPhoto(unit)}
+                      alt={formatAddress(unit.address)}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute top-4 left-4">
                       <span className="bg-black/70 backdrop-blur-sm text-white text-xs font-medium px-3 py-1.5 rounded-full">
-                        {property.tag}
+                        {unit.marketingTitle || `${unit.beds === 0 ? "Studio" : `${unit.beds} Bed`} | ${unit.baths} Bath`}
                       </span>
                     </div>
                   </div>
                   <div className="p-6">
                     <div className="mb-2">
                       <h3 className="font-bold text-lg text-slate-900 group-hover:text-amber-700 transition-colors">
-                        {property.address}
+                        {formatAddress(unit.address)}
                       </h3>
                       <div className="flex items-center text-sm text-slate-500 mt-1">
                         <MapPin className="h-3.5 w-3.5 mr-1" />
-                        {property.city}, CA
+                        {unit.propertyName}
                       </div>
                     </div>
                     <p className="text-slate-600 text-sm mt-3 line-clamp-2">
-                      {property.description}
+                      {unit.marketingDescription || unit.amenities || "Premium LA living near USC"}
                     </p>
                     <div className="flex items-center gap-4 text-sm text-slate-500 mt-4 pt-4 border-t border-slate-100">
                       <span className="flex items-center gap-1.5">
                         <Bed className="h-4 w-4" />
-                        {property.beds} Bed
+                        {unit.beds === 0 ? "Studio" : `${unit.beds} Bed`}
                       </span>
                       <span className="flex items-center gap-1.5">
                         <Bath className="h-4 w-4" />
-                        {property.baths} Bath
+                        {unit.baths} Bath
                       </span>
-                      {property.sqft > 0 && (
+                      {unit.sqft > 0 && (
                         <span className="text-xs text-slate-400">
-                          {property.sqft.toLocaleString()} sqft
+                          {unit.sqft.toLocaleString()} sqft
                         </span>
                       )}
                       <span className="ml-auto font-bold text-lg text-slate-900">
-                        {property.price}
+                        ${unit.rent.toLocaleString()}
                         <span className="text-sm font-normal text-slate-500">
                           /mo
                         </span>
@@ -336,7 +266,7 @@ export default async function HomePage() {
                     </div>
                   </div>
                 </div>
-              </Link>
+              </a>
             ))}
           </div>
         </div>
@@ -354,16 +284,12 @@ export default async function HomePage() {
                 Current Listings
               </h2>
               <p className="text-slate-600">
-                {totalUnits}+ units available across Los Angeles
+                {totalListings} units available across Los Angeles
               </p>
             </div>
             <Link
-              href={
-                isLive
-                  ? "/availability"
-                  : "https://mbtenants.appfolio.com/listings"
-              }
-              target={isLive ? undefined : "_blank"}
+              href="https://mbtenants.appfolio.com/listings"
+              target="_blank"
               className="text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1 mt-4 md:mt-0"
             >
               See all availability
@@ -372,34 +298,30 @@ export default async function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {units.map((listing, i) => (
-              <Link
-                key={i}
-                href={
-                  isLive
-                    ? "/availability"
-                    : "https://mbtenants.appfolio.com/listings"
-                }
-                target={isLive ? undefined : "_blank"}
+            {listings.map((unit) => (
+              <a
+                key={unit.id}
+                href={getListingUrl(unit)}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="group"
               >
                 <div className="bg-white rounded-xl overflow-hidden border border-slate-100 hover:shadow-lg transition-all duration-300">
                   <div className="aspect-[16/10] relative overflow-hidden">
                     <img
-                      src={listing.image}
-                      alt={listing.address}
+                      src={getPhoto(unit)}
+                      alt={formatAddress(unit.address)}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute top-3 right-3">
                       <span className="bg-emerald-500 text-white text-xs font-medium px-2.5 py-1 rounded-full">
-                        {listing.available}
+                        {formatDate(unit.availableDate)}
                       </span>
                     </div>
                   </div>
                   <div className="p-5">
                     <h3 className="font-semibold text-slate-900 group-hover:text-amber-700 transition-colors">
-                      {listing.address}
-                      {listing.unit ? ` - ${listing.unit}` : ""}
+                      {formatAddress(unit.address)}
                     </h3>
                     <div className="flex items-center text-sm text-slate-500 mt-1">
                       <MapPin className="h-3.5 w-3.5 mr-1" />
@@ -409,15 +331,20 @@ export default async function HomePage() {
                       <div className="flex items-center gap-3 text-sm text-slate-500">
                         <span className="flex items-center gap-1">
                           <Bed className="h-3.5 w-3.5" />
-                          {listing.beds} Bd
+                          {unit.beds === 0 ? "Studio" : `${unit.beds} Bd`}
                         </span>
                         <span className="flex items-center gap-1">
                           <Bath className="h-3.5 w-3.5" />
-                          {listing.baths} Ba
+                          {unit.baths} Ba
                         </span>
+                        {unit.sqft > 0 && (
+                          <span className="text-xs text-slate-400">
+                            {unit.sqft.toLocaleString()} sf
+                          </span>
+                        )}
                       </div>
                       <span className="font-bold text-slate-900">
-                        {listing.rent}
+                        ${unit.rent.toLocaleString()}
                         <span className="text-xs font-normal text-slate-500">
                           /mo
                         </span>
@@ -425,7 +352,7 @@ export default async function HomePage() {
                     </div>
                   </div>
                 </div>
-              </Link>
+              </a>
             ))}
           </div>
 
@@ -436,14 +363,10 @@ export default async function HomePage() {
               className="bg-amber-500 hover:bg-amber-600 text-black font-semibold px-8"
             >
               <Link
-                href={
-                  isLive
-                    ? "/availability"
-                    : "https://mbtenants.appfolio.com/listings"
-                }
-                target={isLive ? undefined : "_blank"}
+                href="https://mbtenants.appfolio.com/listings"
+                target="_blank"
               >
-                View All {totalUnits}+ Listings
+                View All Listings
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
@@ -622,7 +545,7 @@ export default async function HomePage() {
               asChild
               className="bg-amber-500 hover:bg-amber-600 text-black font-semibold px-8 h-12"
             >
-              <Link href="/availability">
+              <Link href="https://mbtenants.appfolio.com/listings" target="_blank">
                 View Available Units
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>

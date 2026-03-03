@@ -9,6 +9,7 @@ import { Unit } from "@/types";
 const mockUnits: Unit[] = [
   {
     id: "1",
+    listingId: "",
     propertyId: "1",
     propertyName: "Sunset Gardens",
     unitNumber: "2A",
@@ -20,9 +21,13 @@ const mockUnits: Unit[] = [
     availableNow: true,
     photos: [],
     address: "123 Sunset Blvd, Los Angeles, CA 90026",
+    marketingTitle: "",
+    marketingDescription: "",
+    amenities: "",
   },
   {
     id: "2",
+    listingId: "",
     propertyId: "1",
     propertyName: "Sunset Gardens",
     unitNumber: "3B",
@@ -34,9 +39,13 @@ const mockUnits: Unit[] = [
     availableNow: false,
     photos: [],
     address: "123 Sunset Blvd, Los Angeles, CA 90026",
+    marketingTitle: "",
+    marketingDescription: "",
+    amenities: "",
   },
   {
     id: "3",
+    listingId: "",
     propertyId: "2",
     propertyName: "Highland Terrace",
     unitNumber: "1C",
@@ -48,6 +57,9 @@ const mockUnits: Unit[] = [
     availableNow: true,
     photos: [],
     address: "456 Highland Ave, Los Angeles, CA 90028",
+    marketingTitle: "",
+    marketingDescription: "",
+    amenities: "",
   },
 ];
 

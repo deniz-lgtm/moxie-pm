@@ -17,6 +17,7 @@ export interface Property {
 
 export interface Unit {
   id: string;
+  listingId: string;
   propertyId: string;
   propertyName: string;
   unitNumber: string;
@@ -28,4 +29,7 @@ export interface Unit {
   availableNow: boolean;
   photos: string[];
   address: string;
+  marketingTitle: string;
+  marketingDescription: string;
+  amenities: string;
 }

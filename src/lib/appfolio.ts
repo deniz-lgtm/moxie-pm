@@ -160,6 +160,7 @@ export async function fetchAvailableUnits(): Promise<Unit[]> {
 
       return {
         id: String(u.UnitId || Math.random()),
+        listingId: u.RentableUid || "",
         propertyId: String(u.PropertyId || ""),
         propertyName: u.PropertyName || "",
         unitNumber: u.UnitName || "",
@@ -171,6 +172,9 @@ export async function fetchAvailableUnits(): Promise<Unit[]> {
         availableNow: !rr.MoveOut || new Date(rr.MoveOut) <= new Date(),
         photos: [],
         address: u.UnitAddress || [u.UnitStreet1, u.UnitStreet2].filter(Boolean).join(" ") || "",
+        marketingTitle: u.MarketingTitle || "",
+        marketingDescription: u.MarketingDescription || "",
+        amenities: u.UnitAmenities || "",
       };
     });
   } catch (error) {
