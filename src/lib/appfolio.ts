@@ -37,25 +37,11 @@ function getAuthHeaders() {
   };
 }
 
-async function fetchReport(reportName: string, params?: Record<string, string>): Promise<Record<string, any>[]> {
-  const url = new URL(`${getBaseUrl()}/${reportName}.json`);
-  url.searchParams.append("paginate_results", "true");
-  url.searchParams.append("per_page", "500");
-  
-  // Add portfolio tag filter if specified
-  const config = getConfig();
-  if (config.portfolioTag) {
-    url.searchParams.append("tags", config.portfolioTag);
-  }
-  
-  // Add any additional params
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      url.searchParams.append(key, value);
-    });
-  }
-
-  const response = await fetch(url.toString(), {
+async function fetchReport(reportName: string): Promise<Record<string, any>[]> {
+  // Note: v1 API does not support tags= param (returns empty). All properties
+  // in this account belong to the same portfolio so no filtering needed.
+  const url = `${getBaseUrl()}/${reportName}.json?paginate_results=true&per_page=500`;
+  const response = await fetch(url, {
     headers: getAuthHeaders(),
     next: { revalidate: 3600 },
   });
@@ -123,26 +109,10 @@ export async function fetchAvailableUnits(): Promise<Unit[]> {
   if (!isConfigured()) return [];
 
   try {
-    // First, get the list of Moxie PM property IDs
-    const moxieProperties = await fetchProperties();
-    const moxiePropertyIds = new Set(moxieProperties.map(p => p.id));
-    
-    if (moxiePropertyIds.size === 0) {
-      console.log("No Moxie PM properties found, returning empty units list");
-      return [];
-    }
-    
-    console.log(`Fetching units for ${moxiePropertyIds.size} Moxie PM properties`);
-
     // Use unit_directory and filter for units posted to website (active listings)
     const units = await fetchReport("unit_directory");
-    
-    // Filter to only include units from Moxie PM properties
-    const moxieUnits = units.filter(
-      (u: Record<string, any>) => {
-        const propertyId = String(u.PropertyId || "");
-        return moxiePropertyIds.has(propertyId) && u.PostedToWebsite === "Yes";
-      }
+    const postedUnits = units.filter(
+      (u: Record<string, any>) => u.PostedToWebsite === "Yes"
     );
 
     // Also get rent_roll for vacancy status and BdBa info
@@ -152,9 +122,7 @@ export async function fetchAvailableUnits(): Promise<Unit[]> {
       if (r.UnitId) rentRollByUnitId.set(r.UnitId, r);
     }
 
-    console.log(`Found ${moxieUnits.length} available units in Moxie PM portfolio (out of ${units.length} total)`);
-
-    return moxieUnits.map((u: Record<string, any>) => {
+    return postedUnits.map((u: Record<string, any>) => {
       const rr = rentRollByUnitId.get(u.UnitId) || {};
       const { beds, baths } = parseBdBa(rr.BdBa || "");
 
@@ -195,11 +163,3 @@ export async function fetchPropertyUnits(
   }
 }
 
-// Helper to check if a property is in the Moxie PM portfolio
-export async function isMoxieProperty(propertyId: string): Promise<boolean> {
-  const config = getConfig();
-  if (!config.portfolioTag) return true; // No filtering if no tag set
-  
-  const properties = await fetchProperties();
-  return properties.some(p => p.id === propertyId);
-}
