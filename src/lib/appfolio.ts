@@ -194,3 +194,33 @@ export async function fetchPropertyUnits(
     return [];
   }
 }
+
+// Fetch listing photos from the public Appfolio listings page.
+// The page embeds marker data with default_photo_url for each listing.
+export async function fetchListingPhotos(): Promise<Record<string, string>> {
+  const config = getConfig();
+  try {
+    const url = `https://${config.database}/listings`;
+    const response = await fetch(url, {
+      next: { revalidate: 3600 },
+    });
+    if (!response.ok) return {};
+
+    const html = await response.text();
+    const match = html.match(/markers:\s*(\[[\s\S]*?\])\s*,?\s*\n/);
+    if (!match) return {};
+
+    const markers: { detail_page_url: string; default_photo_url: string }[] = JSON.parse(match[1]);
+    const photos: Record<string, string> = {};
+    for (const m of markers) {
+      const uid = m.detail_page_url?.split("/listings/detail/")[1];
+      if (uid && m.default_photo_url) {
+        photos[uid] = m.default_photo_url;
+      }
+    }
+    return photos;
+  } catch (error) {
+    console.error("Error fetching listing photos:", error);
+    return {};
+  }
+}

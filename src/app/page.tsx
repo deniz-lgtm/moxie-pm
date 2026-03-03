@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { fetchAvailableUnits } from "@/lib/appfolio";
+import { fetchAvailableUnits, fetchListingPhotos } from "@/lib/appfolio";
 import { Unit } from "@/types";
 import {
   ArrowRight,
@@ -16,61 +16,8 @@ import {
 // Revalidate every hour so listings stay fresh
 export const revalidate = 3600;
 
-// Photo lookup by RentableUid (listingId) — scraped from Appfolio listing pages
-const photosByListingId: Record<string, string> = {
-  // 2714 Portland St - Oasis at the ROW
-  "9be44f86-b345-4126-aa5f-e3bf34813968":
-    "https://images.cdn.appfolio.com/mbtenants/images/3920c0d6-4837-43f0-bb16-796e73aca7c6/large.jpg",
-  // 2728 Ellendale Place Unit 5 - Trojan House
-  "c1f56d1f-e834-44f6-917d-bd146e3242a3":
-    "https://images.cdn.appfolio.com/mbtenants/images/b3a002b5-8fb0-461f-baaf-368818b08360/large.jpg",
-  // 707 W 23rd St
-  "ec5d5e7e-c6f1-4c71-80ff-e4d1befdfa52":
-    "https://images.cdn.appfolio.com/mbtenants/images/c3685716-2b78-4347-88e4-dad7ee8d60ff/large.jpg",
-  // 909 W 30th St Unit 2
-  "2733c98c-c839-49f8-a00a-fa4d7d1a739d":
-    "https://images.cdn.appfolio.com/mbtenants/images/6168a921-b217-41f6-a275-760a92c91111/large.jpg",
-  // 1121 28th St - The Hidden Gem
-  "6f5eb389-dac9-4fa2-b3eb-45909c5c82e5":
-    "https://images.cdn.appfolio.com/mbtenants/images/cca84c0e-ab19-4982-9518-711b70f41c44/large.jpg",
-  // 2670 Ellendale Pl - Oasis West
-  "4ae0fc0d-81b2-4e81-984d-60c14cff77ca":
-    "https://images.cdn.appfolio.com/mbtenants/images/dc4338e1-3ad5-4a75-b1c9-f798907d1c08/large.jpg",
-  // 643 W 30th St Unit 1
-  "10f90bc9-aa70-4f7f-92e9-6b9d2ad04b60":
-    "https://images.cdn.appfolio.com/mbtenants/leads_marketing_photos/540ec344-c4bc-47c1-8906-3cbed09992c0/original.jpg",
-  // 2801 Orchard Ave Unit 10
-  "f2f2cdce-6826-43fe-aaac-0e1d7a41c35e":
-    "https://images.cdn.appfolio.com/mbtenants/leads_marketing_photos/846952bd-d01c-4928-87eb-bdedfb65c0c4/original.jpg",
-  // 1137 W 29th St Unit 5 - Sunshine Shack
-  "e54032b3-bf92-4321-a620-a8c760f460ad":
-    "https://images.cdn.appfolio.com/mbtenants/leads_marketing_photos/9966fd0f-ab3a-4f99-88f9-90d9d21bdbbb/original.jpg",
-  // 2801 Orchard Ave Unit 2
-  "8bebc4ab-3241-4583-bb11-6130b220ad00":
-    "https://images.cdn.appfolio.com/mbtenants/leads_marketing_photos/846952bd-d01c-4928-87eb-bdedfb65c0c4/original.jpg",
-  // 643 W 30th St Unit 17
-  "19f0d7dd-4a13-49f9-9d42-4674cfd14fca":
-    "https://images.cdn.appfolio.com/mbtenants/leads_marketing_photos/540ec344-c4bc-47c1-8906-3cbed09992c0/original.jpg",
-  // 1013 W 24th St
-  "0f957893-75f1-4580-a41a-7b4c59d11231":
-    "https://images.cdn.appfolio.com/mbtenants/images/c3685716-2b78-4347-88e4-dad7ee8d60ff/large.jpg",
-  // 1118 3/4 W 30th St - Hula House
-  "4f94d3a6-895a-4a99-9a62-493e61a973cb":
-    "https://images.cdn.appfolio.com/mbtenants/images/6168a921-b217-41f6-a275-760a92c91111/large.jpg",
-  // 1173 W 29th St Unit 1
-  "4766c2c1-699f-4947-a854-cd50179bc4b3":
-    "https://images.cdn.appfolio.com/mbtenants/leads_marketing_photos/9966fd0f-ab3a-4f99-88f9-90d9d21bdbbb/original.jpg",
-  // 2728 Ellendale Place Unit 9 - Trojan House
-  "02400e78-0362-4bd5-bde5-12e5c21561f6":
-    "https://images.cdn.appfolio.com/mbtenants/images/b3a002b5-8fb0-461f-baaf-368818b08360/large.jpg",
-};
-
 const defaultPhoto =
-  "https://images.cdn.appfolio.com/mbtenants/images/3920c0d6-4837-43f0-bb16-796e73aca7c6/large.jpg";
-
-function getPhoto(unit: Unit): string {
-  return photosByListingId[unit.listingId] || defaultPhoto;
-}
+  "https://images.unsplash.com/photo-1534190760961-74e8c1c5c3da?auto=format&fit=crop&w=800&q=80";
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return "Now";
@@ -99,7 +46,12 @@ function getFeatured(units: Unit[]): Unit[] {
 }
 
 export default async function HomePage() {
-  const apiUnits = await fetchAvailableUnits();
+  const [apiUnits, photos] = await Promise.all([
+    fetchAvailableUnits(),
+    fetchListingPhotos(),
+  ]);
+
+  const getPhoto = (unit: Unit) => photos[unit.listingId] || defaultPhoto;
 
   const hasLiveData = apiUnits.length > 0;
   const featured = hasLiveData ? getFeatured(apiUnits) : [];

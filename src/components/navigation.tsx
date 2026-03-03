@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, Phone } from "lucide-react";
@@ -16,6 +17,11 @@ const navLinks = [
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const pathname = usePathname();
+  const isHome = pathname === "/";
+
+  // On non-homepage, always use solid background
+  const useSolid = !isHome || scrolled;
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -26,7 +32,7 @@ export function Navigation() {
   return (
     <header
       className={`fixed top-0 z-50 w-full transition-all duration-300 ${
-        scrolled
+        useSolid
           ? "bg-white/95 backdrop-blur border-b shadow-sm"
           : "bg-transparent"
       }`}
@@ -36,7 +42,7 @@ export function Navigation() {
         <Link href="/" className="flex items-center gap-2">
           <span
             className={`text-xl font-bold transition-colors ${
-              scrolled ? "text-slate-900" : "text-white"
+              useSolid ? "text-slate-900" : "text-white"
             }`}
           >
             Moxie<span className="text-amber-500">.</span>
@@ -50,7 +56,7 @@ export function Navigation() {
               key={link.href}
               href={link.href}
               className={`text-sm font-medium transition-colors ${
-                scrolled
+                useSolid
                   ? "text-slate-600 hover:text-slate-900"
                   : "text-white/80 hover:text-white"
               }`}
@@ -67,7 +73,7 @@ export function Navigation() {
             size="sm"
             asChild
             className={
-              scrolled
+              useSolid
                 ? "text-slate-600 hover:text-slate-900"
                 : "text-white/80 hover:text-white hover:bg-white/10"
             }
@@ -92,7 +98,7 @@ export function Navigation() {
             <Button
               variant="ghost"
               size="icon"
-              className={scrolled ? "" : "text-white hover:bg-white/10"}
+              className={useSolid ? "" : "text-white hover:bg-white/10"}
             >
               <Menu className="h-5 w-5" />
             </Button>
