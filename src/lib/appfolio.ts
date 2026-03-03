@@ -134,25 +134,29 @@ export async function fetchAvailableUnits(): Promise<Unit[]> {
   try {
     const portfolioIds = await getPortfolioIds();
 
-    // Use unit_directory and filter for units posted to website (active listings)
+    // Get unit details from unit_directory (has bedrooms, bathrooms, sqft, marketing info)
     const units = await fetchReport("unit_directory");
-    const postedUnits = units.filter((u: Record<string, any>) => {
-      const isPosted = u.PostedToWebsite === "Yes";
-      // Filter by portfolio if configured
-      const inPortfolio = portfolioIds.size === 0 || portfolioIds.has(u.PortfolioId);
-      return isPosted && inPortfolio;
-    });
-
-    // Also get rent_roll for vacancy status and BdBa info
-    const rentRoll = await fetchReport("rent_roll");
-    const rentRollByUnitId = new Map<number, Record<string, any>>();
-    for (const r of rentRoll) {
-      if (r.UnitId) rentRollByUnitId.set(r.UnitId, r);
+    const unitById = new Map<number, Record<string, any>>();
+    for (const u of units) {
+      if (u.UnitId) unitById.set(u.UnitId, u);
     }
 
-    return postedUnits.map((u: Record<string, any>) => {
-      const rr = rentRollByUnitId.get(u.UnitId) || {};
-      const { beds, baths } = parseBdBa(rr.BdBa || "");
+    // Get vacancy status from rent_roll — filter for vacant/notice units
+    // in the Moxie PM portfolio that are posted to the internet (same as Zillow)
+    const rentRoll = await fetchReport("rent_roll");
+    const vacantUnits = rentRoll.filter((r: Record<string, any>) => {
+      const status = r.Status || "";
+      const isVacant = status.includes("Vacant") || status.includes("Notice");
+      const inPortfolio = portfolioIds.size === 0 || portfolioIds.has(r.PortfolioId);
+      // Cross-check with unit_directory for PostedToInternet flag
+      const unitInfo = unitById.get(r.UnitId);
+      const isListed = unitInfo?.PostedToInternet === "Yes";
+      return isVacant && inPortfolio && isListed;
+    });
+
+    return vacantUnits.map((r: Record<string, any>) => {
+      const u = unitById.get(r.UnitId) || {};
+      const { beds, baths } = parseBdBa(r.BdBa || "");
 
       return {
         id: String(u.UnitId || Math.random()),
@@ -164,8 +168,8 @@ export async function fetchAvailableUnits(): Promise<Unit[]> {
         baths: parseFloat(String(u.Bathrooms || "0")) || baths,
         sqft: parseInt(String(u.SquareFt || "0").replace(/,/g, ""), 10) || 0,
         rent: parseFloat(String(u.MarketRent || u.AdvertisedRent || "0").replace(/[,$]/g, "")) || 0,
-        availableDate: rr.MoveOut || null,
-        availableNow: !rr.MoveOut || new Date(rr.MoveOut) <= new Date(),
+        availableDate: r.MoveOut || null,
+        availableNow: !r.MoveOut || new Date(r.MoveOut) <= new Date(),
         photos: [],
         address: u.UnitAddress || [u.UnitStreet1, u.UnitStreet2].filter(Boolean).join(" ") || "",
         marketingTitle: u.MarketingTitle || "",
