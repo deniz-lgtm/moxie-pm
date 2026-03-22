@@ -68,7 +68,7 @@ export const SEOMetricsManager = {
     return {
       date: new Date().toISOString().split('T')[0],
       sessions: ga4Data.sessions || 1600,
-      sessionsPreviious: ga4Data.previousSessions || 1952,
+      sessionsPrevious: ga4Data.previousSessions || 1952,
       organicSessions: ga4Data.organicSessions || 1559,
       engagementRate: ga4Data.engagementRate || 0.635,
       avgSessionDuration: ga4Data.avgSessionDuration || 261, // seconds
@@ -84,7 +84,7 @@ export const SEOMetricsManager = {
     return stored || {
       date: new Date().toISOString().split('T')[0],
       sessions: 1600,
-      sessionsPreviouse: 1952,
+      sessionsPrevious: 1952,
       organicSessions: 1559,
       engagementRate: 0.635,
       avgSessionDuration: 261,
@@ -296,7 +296,7 @@ export const ReportGenerator = {
 Generated: ${new Date().toLocaleDateString()}
 
 ## 📊 Overview
-- **Sessions:** ${metrics.sessions} (${metrics.sessions < metrics.sessionsPreviouse ? '↓' : '↑'} ${Math.abs(metrics.sessions - metrics.sessionsPreviouse)} vs previous month)
+- **Sessions:** ${metrics.sessions} (${metrics.sessions < metrics.sessionsPrevious ? '↓' : '↑'} ${Math.abs(metrics.sessions - metrics.sessionsPrevious)} vs previous month)
 - **Organic Search:** ${metrics.organicSessions} sessions (${(metrics.organicSessions / metrics.sessions * 100).toFixed(1)}% of traffic)
 - **Engagement Rate:** ${(metrics.engagementRate * 100).toFixed(1)}%
 - **Avg Session Duration:** ${Math.floor(metrics.avgSessionDuration / 60)}m ${metrics.avgSessionDuration % 60}s

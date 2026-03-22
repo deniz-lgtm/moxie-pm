@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ContentManager, ContentGenerator, type ContentPost } from '@/lib/marketing';
 import Link from 'next/link';
 
-export default function CreateContentPage() {
+function CreateContentPageContent() {
   const searchParams = useSearchParams();
   const contentType = (searchParams.get('type') || 'blog') as 'blog' | 'instagram' | 'reddit';
 
@@ -234,5 +234,13 @@ export default function CreateContentPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CreateContentPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center">Loading...</div>}>
+      <CreateContentPageContent />
+    </Suspense>
   );
 }

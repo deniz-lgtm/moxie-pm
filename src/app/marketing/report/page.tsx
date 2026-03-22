@@ -85,8 +85,8 @@ export default function MonthlyReportPage() {
             <div>
               <p className="text-sm text-slate-600 font-medium">Total Sessions</p>
               <p className="text-3xl font-bold text-slate-900 mt-2">{metrics.sessions.toLocaleString()}</p>
-              <p className={`text-sm mt-1 ${metrics.sessions < metrics.sessionsPreviouse ? 'text-red-600' : 'text-green-600'}`}>
-                {metrics.sessions < metrics.sessionsPreviouse ? '↓' : '↑'} {Math.abs(metrics.sessions - metrics.sessionsPreviouse)} vs last month
+              <p className={`text-sm mt-1 ${metrics.sessions < metrics.sessionsPrevious ? 'text-red-600' : 'text-green-600'}`}>
+                {metrics.sessions < metrics.sessionsPrevious ? '↓' : '↑'} {Math.abs(metrics.sessions - metrics.sessionsPrevious)} vs last month
               </p>
             </div>
 

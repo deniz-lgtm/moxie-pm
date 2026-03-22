@@ -90,8 +90,8 @@ export default function MarketingPage() {
               <OverviewCard
                 title="Sessions"
                 value={metrics.sessions.toLocaleString()}
-                change={metrics.sessions - metrics.sessionsPreviouse}
-                changePercent={((metrics.sessions - metrics.sessionsPreviouse) / metrics.sessionsPreviouse * 100).toFixed(1)}
+                change={metrics.sessions - metrics.sessionsPrevious}
+                changePercent={((metrics.sessions - metrics.sessionsPrevious) / metrics.sessionsPrevious * 100).toFixed(1)}
                 icon="📊"
               />
               <OverviewCard
